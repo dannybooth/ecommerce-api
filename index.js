@@ -1,20 +1,43 @@
 const express = require('express');
+const bodyParser = require('body-parser');
+const session = require('express-session');
+const passport = require('./config/passport');
+const routes = require('./routes/index');
+const cors = require('cors');
+const helmet = require('helmet');
+
 const app = express();
-const authRoutes = require('./routes/authRoutes');
+const PORT = process.env.PORT || 4000;
 
-// Middleware
-app.use(express.json()); // To parse JSON request bodies
+app.use(helmet());
+app.use(cors({
+    origin: 'http://localhost:3000',
+    credentials: true,
+}));
+app.use(bodyParser.json());
 
-// Root route
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'default_secret',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { 
+        secure: false,
+        httpOnly: true,
+        sameSite: 'lax' 
+    }
+}));
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Add a root route
 app.get('/', (req, res) => {
     res.send('Welcome to the E-commerce API!');
 });
 
-// Use auth routes
-app.use('/api/auth', authRoutes);
+// Use your routes
+app.use('/api', routes);
 
-// Start the server
-const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });

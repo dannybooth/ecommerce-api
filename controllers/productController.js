@@ -1,35 +1,37 @@
-const pool = require('../models/db');
+const pool = require('../config/db'); // assuming you have a db.js file that sets up your pg Pool
 
-// Get all products
-exports.getProducts = async (req, res) => {
-  const products = await pool.query("SELECT * FROM products");
-  res.json(products.rows);
+// Get all products, optionally filter by category
+const getProducts = (req, res) => {
+  const categoryId = req.query.category;
+  let query = 'SELECT * FROM products';
+  const params = [];
+
+  if (categoryId) {
+    query += ' WHERE category_id = $1';
+    params.push(categoryId);
+  }
+
+  pool.query(query, params, (error, results) => {
+    if (error) {
+      throw error;
+    }
+    res.status(200).json(results.rows);
+  });
 };
 
-// Create a new product
-exports.createProduct = async (req, res) => {
-  const { name, description, price, stock } = req.body;
-  const newProduct = await pool.query(
-    "INSERT INTO products (name, description, price, stock) VALUES ($1, $2, $3, $4) RETURNING *",
-    [name, description, price, stock]
-  );
-  res.json(newProduct.rows[0]);
+// Get a single product by ID
+const getProductById = (req, res) => {
+  const productId = parseInt(req.params.productId);
+
+  pool.query('SELECT * FROM products WHERE id = $1', [productId], (error, results) => {
+    if (error) {
+      throw error;
+    }
+    res.status(200).json(results.rows);
+  });
 };
 
-// Update a product
-exports.updateProduct = async (req, res) => {
-  const { id } = req.params;
-  const { name, description, price, stock } = req.body;
-  const updatedProduct = await pool.query(
-    "UPDATE products SET name = $1, description = $2, price = $3, stock = $4 WHERE id = $5 RETURNING *",
-    [name, description, price, stock, id]
-  );
-  res.json(updatedProduct.rows[0]);
-};
-
-// Delete a product
-exports.deleteProduct = async (req, res) => {
-  const { id } = req.params;
-  await pool.query("DELETE FROM products WHERE id = $1", [id]);
-  res.json({ message: "Product deleted" });
+module.exports = {
+  getProducts,
+  getProductById,
 };
